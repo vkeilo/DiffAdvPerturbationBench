@@ -1,0 +1,9 @@
+[submodule "Algorithms/MetaCloak"]
+	path = Algorithms/MetaCloak
+	url = git@github.com:vkeilo/MetaCloak.git
+[submodule "Algorithms/Anti-DreamBooth"]
+	path = Algorithms/Anti-DreamBooth
+	url = git@github.com:vkeilo/Anti-DreamBooth.git
+[submodule "Algorithms/SimAC"]
+	path = Algorithms/SimAC
+	url = git@github.com:vkeilo/SimAC.git
