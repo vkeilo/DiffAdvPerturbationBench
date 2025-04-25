@@ -7,3 +7,9 @@
 [submodule "Algorithms/SimAC"]
 	path = Algorithms/SimAC
 	url = git@github.com:vkeilo/SimAC.git
+[submodule "Algorithms/mist"]
+	path = Algorithms/mist
+	url = git@github.com:vkeilo/mist.git
+[submodule "Algorithms/Glaze"]
+	path = Algorithms/Glaze
+	url = git@github.com:vkeilo/Glaze.git
