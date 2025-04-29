@@ -1,1 +1,6 @@
-datasets
+datasets/*
+SD/*
+prior-data
+wandb
+__pycache__/
+db_train_logs/*

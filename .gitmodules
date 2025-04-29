@@ -13,3 +13,6 @@
 [submodule "Algorithms/Glaze"]
 	path = Algorithms/Glaze
 	url = git@github.com:vkeilo/Glaze.git
+[submodule "Algorithms/Diff-Protect"]
+	path = Algorithms/Diff-Protect
+	url = git@github.com:vkeilo/Diff-Protect.git
