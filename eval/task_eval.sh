@@ -42,7 +42,6 @@ command="""python eval/eval_genpics.py \
 --output_dir=$EVAL_OUTPUT_DIR \
 --instance_prompt='${instance_prompt}' \
 --class_prompt='a photo of ${class_name}' \
---rounds=$rounds \
 """
 
 

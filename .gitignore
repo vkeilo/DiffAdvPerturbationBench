@@ -4,3 +4,6 @@ prior-data
 wandb
 __pycache__/
 db_train_logs/*
+eval_models/*
+LIQE.pt
+eval/LIQE/IQA_Database

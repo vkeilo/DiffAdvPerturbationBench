@@ -59,6 +59,9 @@ def test_one_args(args,test_lable):
     return exp_batch_name
 
 def update_finished_json(finished_log_json_path, run_name):
+    if not os.path.exists(finished_log_json_path):
+        with open(finished_log_json_path, "w") as f:
+            json.dump({}, f)
     finished_file = json.load(open(finished_log_json_path))
     # if json is empty, add key finished_args_list and value []
     if "finished_args_list" not in finished_file:

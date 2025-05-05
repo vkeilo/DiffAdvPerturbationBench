@@ -1,6 +1,6 @@
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-echo "script dir is $SCRIPT_DIR"
-export DPAB_path="$(dirname "$SCRIPT_DIR")"
+# SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+# echo "script dir is $SCRIPT_DIR"
+# export DPAB_path="$(dirname "$SCRIPT_DIR")"
 export exp_batch_abs_path="$DPAB_path/$exp_batch_path"
 export wandb_entity_name=vkeilo
 export seed=0

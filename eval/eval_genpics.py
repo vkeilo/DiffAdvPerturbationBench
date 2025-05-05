@@ -1,13 +1,16 @@
 import argparse
 import os
+if os.getenv("CUDA_VISIBLE_DEVICES") is None:
+    os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 import sys
 import torch
-sys.path.append("/data/home/yekai/github/MetaCloak")
+script_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(script_dir)
 import re
 # from eval_score import get_score
 import numpy as np
-from robust_facecloak.attacks.worker.differential_color_functions import rgb2lab_diff, ciede2000_diff
-from robust_facecloak.generic.data_utils import PromptDataset, load_data_by_picname
+from differential_color_functions import rgb2lab_diff, ciede2000_diff
+from data_utils import PromptDataset, load_data_by_picname
 
 def find_max_pixel_change(original_img, noisy_img):
     diff = torch.abs(original_img - noisy_img)
@@ -59,41 +62,25 @@ def get_ciede2000_diff(ori_imgs,advimgs):
 def parse_args():
     parser = argparse.ArgumentParser(description="Simple example of a training script.")
     parser.add_argument(
-        "--pretrained_model_name_or_path",
+        "--instance_data_dir",
         type=str,
         default=None,
         required=True,
-        help="Path to pretrained model or model identifier from huggingface.co/models.",
+        help="Image with Adversarial Perturbation.",
     )
     parser.add_argument(
-        "--revision",
-        type=str,
-        default=None,
-        required=False,
-        help=(
-            "Revision of pretrained model identifier from huggingface.co/models. Trainable model components should be"
-            " float32 precision."
-        ),
-    )
-    parser.add_argument(
-        "--tokenizer_name",
-        type=str,
-        default=None,
-        help="Pretrained tokenizer name or path if not the same as model_name",
-    )
-    parser.add_argument(
-        "--instance_data_dir_for_train",
+        "--clean_img_dir",
         type=str,
         default=None,
         required=True,
-        help="A folder containing the training data of instance images.",
+        help="Clean imgs of protected instance",
     )
     parser.add_argument(
-        "--instance_data_dir_for_adversarial",
+        "--clean_ref_db",
         type=str,
         default=None,
         required=True,
-        help="A folder containing the images to add adversarial noise",
+        help="Ref imgs of protected instance",
     )
     parser.add_argument(
         "--class_data_dir",
@@ -101,6 +88,13 @@ def parse_args():
         default=None,
         required=False,
         help="A folder containing the training data of class images.",
+    )
+    parser.add_argument(
+        "--gen_img_dir",
+        type=str,
+        default=None,
+        required=False,
+        help="Customized and fine tuned generated images",
     )
     parser.add_argument(
         "--instance_prompt",
@@ -115,18 +109,7 @@ def parse_args():
         default=None,
         help="The prompt to specify images in the same class as provided instance images.",
     )
-    parser.add_argument(
-        "--with_prior_preservation",
-        default=False,
-        action="store_true",
-        help="Flag to add prior preservation loss.",
-    )
-    parser.add_argument(
-        "--prior_loss_weight",
-        type=float,
-        default=1.0,
-        help="The weight of prior preservation loss.",
-    )
+
     args = parser.parse_args()
     return args
 
@@ -136,11 +119,16 @@ def parse_args():
 # noisy_pics_dir = "/data/home/yekai/github/mypro/MetaCloak/exp_data-ori/gen_output/release-MetaCloak-advance_steps-2-total_trail_num-4-unroll_steps-1-interval-200-total_train_steps-1000-SD21base-robust-gauK-7/dataset-VGGFace2-clean-r-11-model-SD21base-gen_prompt-sks/0/noise-ckpt/final"
 # gen_pics_dir = "/data/home/yekai/github/mypro/MetaCloak/exp_data-ori/train_output/release-MetaCloak-advance_steps-2-total_trail_num-4-unroll_steps-1-interval-200-total_train_steps-1000-SD21base-robust-gauK-7-gau-gau-eval/gen-release-MetaCloak-advance_steps-2-total_trail_num-4-unroll_steps-1-interval-200-total_train_steps-1000-SD21base-robust-gauK-7-dataset-VGGFace2-clean-r-11-model-SD21base-gen_prompt-sks-eval-gau-rate-/0_DREAMBOOTH/checkpoint-1000/dreambooth/a_photo_of_sks_person"
 
-def main():
-
+def main(args):
+    instance_data_dir = args.instance_data_dir
+    clean_img_dir = args.instance_data_dir
+    clean_ref_dir = args.clean_ref_dir
+    gen_img_dir = args.gen_img_dir
+    class_data_dir = args.class_data_dir
+    instance_prompt = args.instance_prompt
+    class_prompt = args.class_prompt
+    
     target_path = "/data/home/yekai/github/MetaCloak/exp_datas_output_antidrm/Orimetacloak4_total480_r6_idx50"
-    rounds = "480"
-    os.environ["CUDA_VISIBLE_DEVICES"] = "3"
     score_dict = {"max_noise_r":[],"noise_L0":[],"pix_change_mean":[],"change_area_mean":[],"ciede2000_score":[]}
 
     def extract_id(s):
