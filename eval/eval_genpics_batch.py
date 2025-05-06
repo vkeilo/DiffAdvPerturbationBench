@@ -76,7 +76,28 @@ gen_prompt = "a_photo_of_sks_person"
 os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 device = torch.device("cuda")
 # score_dict = {"max_noise_r":[],"noise_L0":[],"pix_change_mean":[],"change_area_mean":[],"ciede2000_score":[]}
-eval_items = ["exp_run_name","max_noise_r","noise_L0","pix_change_mean","change_area_mean","ciede2000_score",'SDS','CLIP_Face_IQA','LIQE_Scene_Human','CLIPIQA','BRISQUE','LIQE_Quality','IMS_CLIP_ViT-B/32','CLIP_IQAC','IMS_VGG-Face_cosine']
+# eval_items = ["exp_run_name","max_noise_r","noise_L0","pix_change_mean","change_area_mean","ciede2000_score",'SDS','CLIP_Face_IQA','LIQE_Scene_Human','CLIPIQA','BRISQUE','LIQE_Quality','IMS_CLIP_ViT-B/32','CLIP_IQAC','IMS_VGG-Face_cosine','PSNR_ref','PSNR_train']
+eval_items = ["exp_run_name",
+                "max_noise_r",
+                "noise_L0",
+                "pix_change_mean",
+                "change_area_mean",
+                "ciede2000_score",
+                'SDS',
+                'CLIP_Face_IQA',
+                'LIQE_Scene_Human',
+                'CLIPIQA',
+                'BRISQUE',
+                'LIQE_Quality',
+                'IMS_CLIP_ViT-B/32',
+                'CLIP_IQAC',
+                'IMS_VGG-Face_cosine',
+                'PSNR_ref',
+                'PSNR_train',
+                'FID_ref',
+                'FID_train',]
+
+
 exp_batch_name = target_path.split('/')[-1]
 def extract_id(s):
     match = re.search(r'-id(\d+)-', s)
@@ -96,7 +117,7 @@ for exp_dir in tqdm(sorted_dirlist):
     noisy_pics_dir = os.path.join(exp_path,f"noise-ckpt/{rounds}")
     gen_pics_dir = os.path.join(exp_path,f"train_output/dreambooth/{gen_prompt}")
     # print(gen_pics_dir)
-    score_from_tool = get_score(gen_pics_dir,clean_ref_dir)
+    score_from_tool = get_score(gen_pics_dir,clean_ref_dir,clean_img_dir=ori_pics_dir)
     # score_dict.update(score_from_tool)
     # print(score_dict)
     k_list = list(score_from_tool.keys())

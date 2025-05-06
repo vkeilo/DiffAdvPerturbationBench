@@ -12,6 +12,9 @@ from LIQE.LIQE import LIQE
 import tensorflow as tf
 import numpy as np
 import torch
+from torchmetrics.image.fid import FrechetInceptionDistance
+from torchvision import transforms
+from torchvision.io import read_image
 from piq import CLIPIQA, BRISQUELoss
 clipiqa = CLIPIQA()
 brisque = BRISQUELoss()
@@ -28,7 +31,9 @@ lieq_model = LIQE(ckpt, device = 'cuda' if torch.cuda.is_available() else 'cpu')
 from robust_facecloak.generic.modi_deepface import find_without_savepkl
 from deepface import DeepFace
 import glob
-import os 
+import os
+from skimage.metrics import peak_signal_noise_ratio
+# from pytorch_fid import fid_score 
 
 def loop_to_get_overall_score(gen_image_dir, clean_ref_dir="", func_get_score_of_one_image=None, type_name="face"):
     files_db_gen = glob.glob(os.path.join(gen_image_dir, "*.png"))
@@ -47,17 +52,17 @@ def loop_to_get_overall_score(gen_image_dir, clean_ref_dir="", func_get_score_of
     return np.mean(scores)
 
 class ScoreEval():
-    def __init__(self, func_get_score_of_one_image=lambda image_dir, clean_ref_dir, type_name="face": 0):
+    def __init__(self, func_get_score_of_one_image=lambda image_dir, clean_ref_dir, clean_image_dir, type_name="face", mode=None: 0):
         self.func_get_score_of_one_image = func_get_score_of_one_image
     
-    def __loop_to_get_overall_score__(self, gen_image_dir, clean_ref_db=None, type_name="face"):
+    def __loop_to_get_overall_score__(self, gen_image_dir, clean_ref_db=None, clean_image_dir=None, type_name="face", mode=None):
         files_db_gen = glob.glob(os.path.join(gen_image_dir, "*.png"))
         files_db_gen += glob.glob(os.path.join(gen_image_dir, "*.jpg"))
         scores = []
         assert len(files_db_gen) > 0
         for i in range(len(files_db_gen)):
             gen_i = files_db_gen[i]
-            score = self.func_get_score_of_one_image(gen_i, clean_ref_db, type_name=type_name)
+            score = self.func_get_score_of_one_image(gen_i, clean_ref_db, clean_image_dir, type_name=type_name, mode=mode)
             scores.append(score)
         # filter out nan and np.inf 
         scores = np.array(scores)
@@ -67,11 +72,11 @@ class ScoreEval():
         # return np.mean(scores)
         return scores
     
-    def __call__(self, gen_image_dir, clean_ref_db=None, type_name="face"):
-        return self.__loop_to_get_overall_score__( gen_image_dir, clean_ref_db, type_name=type_name)
+    def __call__(self, gen_image_dir, clean_ref_db=None, clean_image_dir = None, type_name="face", mode = None):
+        return self.__loop_to_get_overall_score__(gen_image_dir, clean_ref_db, clean_image_dir, type_name=type_name, mode=mode)
     
 
-def BRISQUE_get_score(gen_i, clean_ref_db=None, type_name="face"):
+def BRISQUE_get_score(gen_i, clean_ref_db=None, clean_image_dir=None, type_name="face", mode=None):
     from PIL import Image
     PIL_image = Image.open(gen_i).convert("RGB")
     from torchvision import transforms
@@ -82,7 +87,7 @@ def BRISQUE_get_score(gen_i, clean_ref_db=None, type_name="face"):
 
 BRISQUE_Scorer = ScoreEval(func_get_score_of_one_image=BRISQUE_get_score)
 
-def CLIPIQA_get_score(gen_i, clean_ref_db=None, type_name="face"):
+def CLIPIQA_get_score(gen_i, clean_ref_db=None, clean_image_dir=None,type_name="face", mode=None):
     from PIL import Image
     PIL_image = Image.open(gen_i).convert("RGB")
     from torchvision import transforms
@@ -93,7 +98,7 @@ def CLIPIQA_get_score(gen_i, clean_ref_db=None, type_name="face"):
 CLIP_IQA_Scorer = ScoreEval(func_get_score_of_one_image=CLIPIQA_get_score)
 
 
-def LIQE_get_quality_score(gen_i, clean_ref_db=None, type_name="face"):
+def LIQE_get_quality_score(gen_i, clean_ref_db=None, clean_image_dir=None,type_name="face", mode=None):
     img = Image.open(gen_i).convert('RGB')
     from torchvision.transforms import ToTensor
     img = ToTensor()(img).unsqueeze(0)
@@ -101,7 +106,7 @@ def LIQE_get_quality_score(gen_i, clean_ref_db=None, type_name="face"):
     return q1.item()
 LIQE_Quality_Scorer = ScoreEval(func_get_score_of_one_image=LIQE_get_quality_score)
 
-def LIQE_get_scene_human_score(gen_i, clean_ref_db=None, type_name="face"):
+def LIQE_get_scene_human_score(gen_i, clean_ref_db=None, clean_image_dir=None,type_name="face", mode=None):
     img = Image.open(gen_i).convert('RGB')
     from torchvision.transforms import ToTensor
     img = ToTensor()(img).unsqueeze(0)
@@ -110,7 +115,7 @@ def LIQE_get_scene_human_score(gen_i, clean_ref_db=None, type_name="face"):
 LIQE_Scene_Human_Scorer = ScoreEval(func_get_score_of_one_image=LIQE_get_scene_human_score)
 
 
-def IMS_CLIP_get_score(gen_i, clean_ref_db, type_name="face"):
+def IMS_CLIP_get_score(gen_i, clean_ref_db, clean_image_dir=None,type_name="face", mode=None):
     import torch
     img = Image.open(gen_i).convert('RGB')
     image = clip_preprocess(img).unsqueeze(0).to('cuda')
@@ -140,7 +145,7 @@ def IMS_CLIP_get_score(gen_i, clean_ref_db, type_name="face"):
 
 IMS_CLIP_Scorer = ScoreEval(func_get_score_of_one_image=IMS_CLIP_get_score)
 
-def CLIP_Face_get_score(gen_i, clean_ref_db=None, type_name="face"):
+def CLIP_Face_get_score(gen_i, clean_ref_db=None, clean_image_dir=None,type_name="face", mode=None):
     import torch
     gen_img = Image.open(gen_i).convert('RGB')
     image = clip_preprocess(gen_img).unsqueeze(0).to('cuda')
@@ -156,7 +161,7 @@ def CLIP_Face_get_score(gen_i, clean_ref_db=None, type_name="face"):
 
 CLIP_Face_Scorer = ScoreEval(func_get_score_of_one_image=CLIP_Face_get_score)
 
-def CLIP_IQAC_get_score(gen_i, clean_ref_db=None, type_name="face"):
+def CLIP_IQAC_get_score(gen_i, clean_ref_db=None, clean_image_dir=None,type_name="face", mode=None):
     import torch
     gen_img = Image.open(gen_i).convert('RGB')
     image = clip_preprocess(gen_img).unsqueeze(0).to('cuda')
@@ -172,7 +177,7 @@ def CLIP_IQAC_get_score(gen_i, clean_ref_db=None, type_name="face"):
 
 CLIP_IQAC_Scorer = ScoreEval(func_get_score_of_one_image=CLIP_IQAC_get_score)
 
-def CLIP_zero_short_classification_get_score(gen_i, clean_ref_db=None, type_name="face"):
+def CLIP_zero_short_classification_get_score(gen_i, clean_ref_db=None, clean_image_dir=None,type_name="face", mode=None):
     import torch
     gen_img = Image.open(gen_i).convert('RGB')
     image = clip_preprocess(gen_img).unsqueeze(0).to('cuda')
@@ -188,7 +193,9 @@ def CLIP_zero_short_classification_get_score(gen_i, clean_ref_db=None, type_name
 
 CLIP_zero_short_classification_Scorer = ScoreEval(func_get_score_of_one_image=CLIP_zero_short_classification_get_score)
 
-def IMS_get_score(gen_i, clean_ref_db, type_name="face", distance_metric="cosine", model_name="VGG-Face"):
+def IMS_get_score(gen_i, clean_ref_db, clean_image_dir=None, type_name="face", mode=["cosine","VGG-Face"]):
+    distance_metric = mode[0]
+    model_name = mode[1]
     dfs = find_without_savepkl(img_path = gen_i, db_path = clean_ref_db, enforce_detection=False, distance_metric=distance_metric, model_name=model_name, )
     all_scores = dfs[0][f'{model_name}_{distance_metric}'].values
     import numpy as np
@@ -202,7 +209,7 @@ def IMS_get_score(gen_i, clean_ref_db, type_name="face", distance_metric="cosine
 
 IMS_Face_Scorer = ScoreEval(func_get_score_of_one_image=IMS_get_score)
 
-def FDSR_get_score(gen_i, clean_ref_db=None, model='retinaface', type_name="face"):
+def FDSR_get_score(gen_i, clean_ref_db=None, clean_image_dir=None, model='retinaface', type_name="face", mode=None):
     face_obj = DeepFace.extract_faces(img_path = gen_i, 
         target_size = (224,224),
         detector_backend = model,
@@ -215,7 +222,62 @@ def FDSR_get_score(gen_i, clean_ref_db=None, model='retinaface', type_name="face
 
 FDSR_Scorer = ScoreEval(func_get_score_of_one_image=FDSR_get_score)
 
-def get_score(image_dir, clean_ref_dir=None, type_name="person", ):
+
+def PSNR_get_score(gen_i, clean_ref_db=None, clean_img_dir=None, type_name="face", mode='ref'):
+    """PSNR指标计算函数"""
+    assert mode in ['ref','ori']
+    if mode=='ref':
+        target_path = clean_ref_db
+    else:
+        target_path = clean_img_dir
+    scores_list = []
+    for filename in os.listdir(target_path):
+        if not (filename.endswith('png') or filename.endswith('jpg')):
+            continue
+        clean_ref_img = os.path.join(target_path,filename)
+        # 读取并预处理图像
+        img_gen = np.array(Image.open(gen_i).convert('RGB'))
+        img_ref = np.array(Image.open(clean_ref_img).convert('RGB'))
+        
+        # 统一图像尺寸（使用生成图像的尺寸）
+        if img_gen.shape != img_ref.shape:
+            img_ref = np.array(Image.fromarray(img_ref).resize((img_gen.shape[1], img_gen.shape[0])))
+        scores = peak_signal_noise_ratio(img_ref, img_gen, data_range=255)
+        scores_list.append(scores)
+    print(scores_list)
+    # 计算PSNR（数值范围0-255）
+    return np.mean(scores)
+
+PSNR_Scorer = ScoreEval(func_get_score_of_one_image=PSNR_get_score)
+
+def FID_get_score(gen_i, clean_ref_db=None, clean_img_dir=None, type_name="face", mode='ref'):
+    assert mode in ['ref','ori']
+    transform = transforms.Compose([
+        transforms.Resize((299, 299)),
+    ])
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # 初始化 FID 模块
+    fid = FrechetInceptionDistance(feature=2048).to(device)
+
+    def load_images_from_dir(img_dir, real=True):
+        for fname in os.listdir(img_dir):
+            if fname.lower().endswith(('.png', '.jpg', '.jpeg')):
+                img_path = os.path.join(img_dir, fname)
+                try:
+                    img = read_image(img_path)  # dtype = torch.uint8, shape = [C, H, W]
+                    img = transform(img).unsqueeze(0).to(device)
+                    fid.update(img, real=real)
+                except Exception as e:
+                    print(f"Warning: Failed to load {img_path} - {e}")
+    if mode == 'ori':
+        load_images_from_dir(clean_img_dir, real=True)
+    else:
+        load_images_from_dir(clean_ref_db, real=True)
+    load_images_from_dir(gen_i, real=False)
+    return fid.compute().item()
+
+
+def get_score(image_dir, clean_ref_dir=None, clean_img_dir = None, type_name="person", ):
     # 此处增加扰动图像的评估
     if type_name == "person":
         type_name = "face"
@@ -234,9 +296,12 @@ def get_score(image_dir, clean_ref_dir=None, type_name="person", ):
     result_dict['LIQE_Quality'] = LIQE_Quality_Scorer(gen_image_dir=image_dir, clean_ref_db=clean_ref_dir, type_name=type_name)
     result_dict['IMS_CLIP_ViT-B/32'] = IMS_CLIP_Scorer(gen_image_dir=image_dir, clean_ref_db=clean_ref_dir, type_name=type_name)
     result_dict['CLIP_IQAC'] = CLIP_IQAC_Scorer(gen_image_dir=image_dir, clean_ref_db=clean_ref_dir, type_name=type_name)
-    
+    result_dict['PSNR_ref'] = PSNR_Scorer(gen_image_dir=image_dir, clean_ref_db=clean_ref_dir, clean_image_dir=clean_img_dir, type_name=type_name, mode='ref')
+    result_dict['PSNR_train'] = PSNR_Scorer(gen_image_dir=image_dir, clean_ref_db=clean_ref_dir, clean_image_dir=clean_img_dir, type_name=type_name, mode='ori')
+    result_dict['FID_ref'] = FID_get_score(gen_i=image_dir, clean_ref_db=clean_ref_dir, clean_img_dir=clean_img_dir, type_name=type_name, mode='ref')
+    result_dict['FID_train'] = FID_get_score(gen_i=image_dir, clean_ref_db=clean_ref_dir, clean_img_dir=clean_img_dir, type_name=type_name, mode='ori')
     if type_name == "face":
-        result_dict[f"IMS_VGG-Face_cosine"] = IMS_Face_Scorer(gen_image_dir=image_dir, clean_ref_db=clean_ref_dir, type_name=type_name)
+        result_dict[f"IMS_VGG-Face_cosine"] = IMS_Face_Scorer(gen_image_dir=image_dir, clean_ref_db=clean_ref_dir, type_name=type_name,mode=["cosine","VGG-Face"])
                 
     return result_dict
 
