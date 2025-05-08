@@ -58,11 +58,11 @@ def generate_lin_interval_list(start, end, num):
 
 # Define the possible values for each parameter
 # test_lable = "Orimetacloak4_total480_r6_idx50"
-test_lable = "SDS_VGGFace2_random50_r4p8p12p16"
+test_lable = "MetaCloak_SD21_VGGFace2_random50_r4p8p12p16"
 params_options = {
     "DPAB_path":["/data/home/yekai/github/DiffAdvPerturbationBench"],
     "dataset_name":["VGGFace2-clean"],
-    "exp_batch_path": ["Algorithms/Diff-Protect/exp_datas_output/SDS_SD21_VGGFace2_random50_r4p8p12p16"],
+    "exp_batch_path": ["Algorithms/MetaCloak/exp_datas_output/MetaCloak_SD21_VGGFace2_random50_r4p8p12p16"],
     "pretrained_model_name_or_path": ["/data/home/yekai/github/DiffAdvPerturbationBench/SD/stable-diffusion-2-1-base"],
     "wandb_project_name": ["Dreambooth_train"],
     "mixed_precision": ["fp16"],
@@ -73,7 +73,7 @@ params_options = {
     "inference_prompts": ["a photo of sks person;a dslr photo of sks person"],
     "class_name": ["person"],
     "eval_gen_img_num": [16],
-    "use_sample_steps": ["100"],
+    "use_sample_steps": ["final"],
     # "eval_mode":["gau"]
     # "gauK":[7]
 }

@@ -33,6 +33,8 @@ from deepface import DeepFace
 import glob
 import os
 from skimage.metrics import peak_signal_noise_ratio
+import lpips
+from skimage.metrics import structural_similarity as ssim
 # from pytorch_fid import fid_score 
 
 def loop_to_get_overall_score(gen_image_dir, clean_ref_dir="", func_get_score_of_one_image=None, type_name="face"):
@@ -225,12 +227,32 @@ FDSR_Scorer = ScoreEval(func_get_score_of_one_image=FDSR_get_score)
 
 def PSNR_get_score(gen_i, clean_ref_db=None, clean_img_dir=None, type_name="face", mode='ref'):
     """PSNR指标计算函数"""
-    assert mode in ['ref','ori']
+    assert mode in ['ref','ori','perturbation']
     if mode=='ref':
         target_path = clean_ref_db
     else:
         target_path = clean_img_dir
     scores_list = []
+
+    if mode =="perturbation":
+        noise_img_name = os.path.basename(gen_i)
+        clean_img_name = None
+        for filename in os.listdir(target_path):
+            if filename in noise_img_name:
+                clean_img_name = filename
+                break
+        if clean_img_name == None:
+            exit(f'clean img of {gen_i} not found,{os.listdir(target_path)} not in {noise_img_name}')
+        clean_img_path = os.path.join(clean_img_dir,clean_img_name)
+        img_gen = np.array(Image.open(gen_i).convert('RGB'))
+        img_ref = np.array(Image.open(clean_img_path).convert('RGB'))
+        
+        # 统一图像尺寸（使用生成图像的尺寸）
+        if img_gen.shape != img_ref.shape:
+            img_ref = np.array(Image.fromarray(img_ref).resize((img_gen.shape[1], img_gen.shape[0])))
+        scores = peak_signal_noise_ratio(img_ref, img_gen, data_range=255)
+        return scores
+
     for filename in os.listdir(target_path):
         if not (filename.endswith('png') or filename.endswith('jpg')):
             continue
@@ -244,7 +266,7 @@ def PSNR_get_score(gen_i, clean_ref_db=None, clean_img_dir=None, type_name="face
             img_ref = np.array(Image.fromarray(img_ref).resize((img_gen.shape[1], img_gen.shape[0])))
         scores = peak_signal_noise_ratio(img_ref, img_gen, data_range=255)
         scores_list.append(scores)
-    print(scores_list)
+    # print(scores_list)
     # 计算PSNR（数值范围0-255）
     return np.mean(scores)
 
@@ -276,32 +298,97 @@ def FID_get_score(gen_i, clean_ref_db=None, clean_img_dir=None, type_name="face"
     load_images_from_dir(gen_i, real=False)
     return fid.compute().item()
 
+def LPIPS_get_score(gen_i, clean_ref_db=None, clean_img_dir=None, type_name="face", mode='alex'):
+    # attention! when culculating LPIPS, gen_i here we set as the perturbation image
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    loss_fn = lpips.LPIPS(net=mode).to(device)
+    transform = transforms.Compose([
+        # transforms.Resize((256, 256)),  # 根据需要调整图像大小
+        transforms.ToTensor(),
+        transforms.Normalize((0.5,), (0.5,))  # [-1, 1]范围
+    ])
 
-def get_score(image_dir, clean_ref_dir=None, clean_img_dir = None, type_name="person", ):
+    names1 = sorted(os.listdir(gen_i))
+    names2 = sorted(os.listdir(clean_img_dir))
+    # print(names1)
+    # print(names2)
+    assert len(names1) == len(names2), "image number should be the same"
+
+    scores = []
+    for n1, n2 in zip(names1, names2):
+        img1_path = os.path.join(gen_i, n1)
+        img2_path = os.path.join(clean_img_dir, n2)
+
+        img1 = transform(Image.open(img1_path).convert('RGB')).unsqueeze(0).to(device)
+        img2 = transform(Image.open(img2_path).convert('RGB')).unsqueeze(0).to(device)
+
+        with torch.no_grad():
+            d = loss_fn(img1, img2)
+        scores.append(d.item())
+
+    mean_score = sum(scores) / len(scores)
+    # print(f"平均 LPIPS 分数：{mean_score:.4f}")
+    return mean_score
+
+def SSIM_get_score(gen_i, clean_ref_db=None, clean_img_dir=None, type_name="face", mode=None):
+    # attention! when culculating LPIPS, gen_i here we set as the perturbation image
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+    ])
+
+    names1 = sorted(os.listdir(gen_i))
+    names2 = sorted(os.listdir(clean_img_dir))
+    # print(names1)
+    # print(names2)
+    assert len(names1) == len(names2), "image number should be the same"
+
+    scores = []
+    for n1, n2 in zip(names1, names2):
+        img1_path = os.path.join(gen_i, n1)
+        img2_path = os.path.join(clean_img_dir, n2)
+
+        img1 = Image.open(img1_path).convert('RGB')
+        img2 = Image.open(img2_path).convert('RGB')
+
+        img1 = transform(img1).permute(1, 2, 0).numpy()  # HWC
+        img2 = transform(img2).permute(1, 2, 0).numpy()
+
+        s = ssim(img1, img2, data_range=1.0, channel_axis=-1) 
+        scores.append(s)
+
+    mean_score = sum(scores) / len(scores)
+    # print(f"平均 SSIM 分数：{mean_score:.4f}")
+    return mean_score
+
+def get_score(image_dir, clean_ref_dir=None, clean_img_dir = None, type_name="person", perturbed_img_dir=None, eval_items=None):
     # 此处增加扰动图像的评估
     if type_name == "person":
         type_name = "face"
         
     result_dict = {}
     if type_name == "face":
-        result_dict['SDS'] = FDSR_Scorer(gen_image_dir=image_dir, clean_ref_db=clean_ref_dir, type_name=type_name)
-        result_dict['CLIP_Face_IQA'] = CLIP_Face_Scorer(gen_image_dir=image_dir, clean_ref_db=clean_ref_dir, type_name=type_name)
-        result_dict['LIQE_Scene_Human'] =  LIQE_Scene_Human_Scorer(gen_image_dir=image_dir, clean_ref_db=clean_ref_dir, type_name=type_name)
+        if 'SDS' in eval_items: result_dict['SDS'] = FDSR_Scorer(gen_image_dir=image_dir, clean_ref_db=clean_ref_dir, type_name=type_name)
+        if 'CLIP_Face_IQA' in eval_items: result_dict['CLIP_Face_IQA'] = CLIP_Face_Scorer(gen_image_dir=image_dir, clean_ref_db=clean_ref_dir, type_name=type_name)
+        if 'LIQE_Scene_Human' in eval_items: result_dict['LIQE_Scene_Human'] =  LIQE_Scene_Human_Scorer(gen_image_dir=image_dir, clean_ref_db=clean_ref_dir, type_name=type_name)
     else:
-        CLIP_zero_short_classification_score = CLIP_zero_short_classification_Scorer(gen_image_dir=image_dir, clean_ref_db=clean_ref_dir, type_name=type_name)
-        result_dict['SDS'] = CLIP_zero_short_classification_score
+        if 'SDS' in eval_items: CLIP_zero_short_classification_score = CLIP_zero_short_classification_Scorer(gen_image_dir=image_dir, clean_ref_db=clean_ref_dir, type_name=type_name)
+        if 'SDS' in eval_items: result_dict['SDS'] = CLIP_zero_short_classification_score
          
-    result_dict['CLIPIQA'] = CLIP_IQA_Scorer(gen_image_dir=image_dir, clean_ref_db=clean_ref_dir, type_name=type_name)
-    result_dict['BRISQUE'] = BRISQUE_Scorer(gen_image_dir=image_dir, clean_ref_db=clean_ref_dir, type_name=type_name)
-    result_dict['LIQE_Quality'] = LIQE_Quality_Scorer(gen_image_dir=image_dir, clean_ref_db=clean_ref_dir, type_name=type_name)
-    result_dict['IMS_CLIP_ViT-B/32'] = IMS_CLIP_Scorer(gen_image_dir=image_dir, clean_ref_db=clean_ref_dir, type_name=type_name)
-    result_dict['CLIP_IQAC'] = CLIP_IQAC_Scorer(gen_image_dir=image_dir, clean_ref_db=clean_ref_dir, type_name=type_name)
-    result_dict['PSNR_ref'] = PSNR_Scorer(gen_image_dir=image_dir, clean_ref_db=clean_ref_dir, clean_image_dir=clean_img_dir, type_name=type_name, mode='ref')
-    result_dict['PSNR_train'] = PSNR_Scorer(gen_image_dir=image_dir, clean_ref_db=clean_ref_dir, clean_image_dir=clean_img_dir, type_name=type_name, mode='ori')
-    result_dict['FID_ref'] = FID_get_score(gen_i=image_dir, clean_ref_db=clean_ref_dir, clean_img_dir=clean_img_dir, type_name=type_name, mode='ref')
-    result_dict['FID_train'] = FID_get_score(gen_i=image_dir, clean_ref_db=clean_ref_dir, clean_img_dir=clean_img_dir, type_name=type_name, mode='ori')
+    if 'CLIPIQA' in eval_items: result_dict['CLIPIQA'] = CLIP_IQA_Scorer(gen_image_dir=image_dir, clean_ref_db=clean_ref_dir, type_name=type_name)
+    if 'BRISQUE' in eval_items: result_dict['BRISQUE'] = BRISQUE_Scorer(gen_image_dir=image_dir, clean_ref_db=clean_ref_dir, type_name=type_name)
+    if 'LIQE_Quality' in eval_items: result_dict['LIQE_Quality'] = LIQE_Quality_Scorer(gen_image_dir=image_dir, clean_ref_db=clean_ref_dir, type_name=type_name)
+    if 'IMS_CLIP_ViT-B/32' in eval_items: result_dict['IMS_CLIP_ViT-B/32'] = IMS_CLIP_Scorer(gen_image_dir=image_dir, clean_ref_db=clean_ref_dir, type_name=type_name)
+    if 'CLIP_IQAC' in eval_items: result_dict['CLIP_IQAC'] = CLIP_IQAC_Scorer(gen_image_dir=image_dir, clean_ref_db=clean_ref_dir, type_name=type_name)
+    if 'PSNR_ref' in eval_items: result_dict['PSNR_ref'] = PSNR_Scorer(gen_image_dir=image_dir, clean_ref_db=clean_ref_dir, clean_image_dir=clean_img_dir, type_name=type_name, mode='ref')
+    if 'PSNR_train' in eval_items: result_dict['PSNR_train'] = PSNR_Scorer(gen_image_dir=image_dir, clean_ref_db=clean_ref_dir, clean_image_dir=clean_img_dir, type_name=type_name, mode='ori')
+    if 'PSNR_perturbation' in eval_items: result_dict['PSNR_perturbation'] = PSNR_Scorer(gen_image_dir=perturbed_img_dir, clean_ref_db=clean_ref_dir, clean_image_dir=clean_img_dir, type_name=type_name, mode='perturbation')
+    if 'FID_ref' in eval_items: result_dict['FID_ref'] = FID_get_score(gen_i=image_dir, clean_ref_db=clean_ref_dir, clean_img_dir=clean_img_dir, type_name=type_name, mode='ref')
+    if 'FID_train' in eval_items: result_dict['FID_train'] = FID_get_score(gen_i=image_dir, clean_ref_db=clean_ref_dir, clean_img_dir=clean_img_dir, type_name=type_name, mode='ori')
+    if 'LPIPS' in eval_items: result_dict['LPIPS'] = LPIPS_get_score(gen_i=perturbed_img_dir, clean_ref_db=None, clean_img_dir=clean_img_dir, type_name=type_name, mode='alex')
+    if 'SSIM' in eval_items: result_dict['SSIM'] = SSIM_get_score(gen_i=perturbed_img_dir, clean_ref_db=None, clean_img_dir=clean_img_dir, type_name=type_name)
     if type_name == "face":
-        result_dict[f"IMS_VGG-Face_cosine"] = IMS_Face_Scorer(gen_image_dir=image_dir, clean_ref_db=clean_ref_dir, type_name=type_name,mode=["cosine","VGG-Face"])
+        if 'IMS_VGG-Face_cosine' in eval_items: result_dict[f"IMS_VGG-Face_cosine"] = IMS_Face_Scorer(gen_image_dir=image_dir, clean_ref_db=clean_ref_dir, type_name=type_name,mode=["cosine","VGG-Face"])
                 
     return result_dict
 
