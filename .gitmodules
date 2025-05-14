@@ -16,3 +16,6 @@
 [submodule "Algorithms/Diff-Protect"]
 	path = Algorithms/Diff-Protect
 	url = git@github.com:vkeilo/Diff-Protect.git
+[submodule "Algorithms/VCPro"]
+	path = Algorithms/VCPro
+	url = git@github.com:vkeilo/VCPro.git

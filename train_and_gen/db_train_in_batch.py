@@ -5,6 +5,8 @@ import re
 import argparse
 import numpy as np
 
+train_output_dir_name = "train_output"
+
 def set_env_with_expansion(key, value):
     """
     将环境变量值中的 ${VAR_NAME} 替换为对应的环境变量值，并设置新的环境变量。
@@ -47,8 +49,10 @@ def test_one_args(args,test_lable):
     print(f'run_name_list: {run_name_list}')
     finished_run_name_list = os.listdir(logs_path)
     for run_name in run_name_list:
+        exp_abs_path = os.path.join(exp_batch_abs_path,run_name)
+        print(os.listdir(exp_abs_path))
         tmp_log_path = os.path.join(logs_path, f"{run_name}.log")
-        if f'{run_name}.log' in finished_run_name_list and check_file_end(tmp_log_path, "train and gen finished"):
+        if f'{run_name}.log' in finished_run_name_list and check_file_end(tmp_log_path, "train and gen finished") and (train_output_dir_name in os.listdir(exp_abs_path)):
             print(f"run {run_name} finished, skip it") 
             continue
         print(f'processing run: {run_name}')
