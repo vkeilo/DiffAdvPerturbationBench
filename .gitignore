@@ -6,4 +6,7 @@ __pycache__/
 db_train_logs/*
 eval_models/*
 LIQE.pt
+class-person/*
+datesets_eval/*
+finished_test/*
 eval/LIQE/IQA_Database

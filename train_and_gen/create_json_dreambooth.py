@@ -58,22 +58,29 @@ def generate_lin_interval_list(start, end, num):
 
 # Define the possible values for each parameter
 # test_lable = "Orimetacloak4_total480_r6_idx50"
-test_lable = "MetaCloak_SD21_VGGFace2_random50_r4p8p12p16"
+test_lable = "Mist_SD21_VGGFace2_random50_mytarget2e-1_dynamic_r12"
 params_options = {
     "DPAB_path":["/data/home/yekai/github/DiffAdvPerturbationBench"],
+    # VGGFace2-clean/wikiart-data
     "dataset_name":["VGGFace2-clean"],
-    "exp_batch_path": ["Algorithms/MetaCloak/exp_datas_output/MetaCloak_SD21_VGGFace2_random50_r4p8p12p16"],
+    "exp_batch_path": ["Algorithms/mist/exp_datas_output/Mist_SD21_VGGFace2_random50_mytarget2e-1_dynamic_r12"],
     "pretrained_model_name_or_path": ["/data/home/yekai/github/DiffAdvPerturbationBench/SD/stable-diffusion-2-1-base"],
     "wandb_project_name": ["Dreambooth_train"],
     "mixed_precision": ["fp16"],
     "dreambooth_training_steps": [1000],
     "db_lr":[5e-7],
-    # person/
+    # "a photo of sks person"
     "instance_prompt": ["a photo of sks person"],
-    "inference_prompts": ["a photo of sks person;a dslr photo of sks person"],
+    # "instance_prompt": ["a painting of sks artwork"],
+    # "a photo of sks person;a dslr photo of sks person"
+    # "inference_prompts": ["a painting of sks artwork"],
+    "inference_prompts": ["a photo of sks person"],
+    # painting/person
+    # "class_name": ["painting"],
     "class_name": ["person"],
     "eval_gen_img_num": [16],
-    "use_sample_steps": ["final"],
+    # aspl 50 fsmg100 SimAC 50 mist 100 sds100 meta final
+    "use_sample_steps": ["100"],
     # "eval_mode":["gau"]
     # "gauK":[7]
 }

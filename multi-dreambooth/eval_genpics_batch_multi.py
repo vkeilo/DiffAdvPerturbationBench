@@ -4,7 +4,9 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 import glob
 import sys
 script_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.append(script_dir)
+eval_tools_path = os.path.join(os.path.dirname(script_dir),'eval')
+sys.path.append(eval_tools_path)
+print(eval_tools_path)
 import torch
 import re
 from eval_score import get_score
@@ -16,6 +18,7 @@ from tqdm import tqdm
 import argparse
 import gc
 from torch_fidelity import calculate_metrics
+import json
 
 def find_max_pixel_change(original_img, noisy_img):
     diff = torch.abs(original_img - noisy_img)
@@ -68,31 +71,37 @@ def move_column_to_front(df, column_name):
     cols = [column_name] + [c for c in df.columns if c != column_name]
     return df[cols]
 
-# exp_dir = "/data/home/yekai/github/mypro/MetaCloak/exp_data-ori"
-
-# ori_pics_dir = "/data/home/yekai/github/mypro/MetaCloak/exp_data-ori/gen_output/release-MetaCloak-advance_steps-2-total_trail_num-4-unroll_steps-1-interval-200-total_train_steps-1000-SD21base-robust-gauK-7/dataset-VGGFace2-clean-r-11-model-SD21base-gen_prompt-sks/0/image_before_addding_noise"
-# noisy_pics_dir = "/data/home/yekai/github/mypro/MetaCloak/exp_data-ori/gen_output/release-MetaCloak-advance_steps-2-total_trail_num-4-unroll_steps-1-interval-200-total_train_steps-1000-SD21base-robust-gauK-7/dataset-VGGFace2-clean-r-11-model-SD21base-gen_prompt-sks/0/noise-ckpt/final"
-# gen_pics_dir = "/data/home/yekai/github/mypro/MetaCloak/exp_data-ori/train_output/release-MetaCloak-advance_steps-2-total_trail_num-4-unroll_steps-1-interval-200-total_train_steps-1000-SD21base-robust-gauK-7-gau-gau-eval/gen-release-MetaCloak-advance_steps-2-total_trail_num-4-unroll_steps-1-interval-200-total_train_steps-1000-SD21base-robust-gauK-7-dataset-VGGFace2-clean-r-11-model-SD21base-gen_prompt-sks-eval-gau-rate-/0_DREAMBOOTH/checkpoint-1000/dreambooth/a_photo_of_sks_person"
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--target", type=str, default="None")
     parser.add_argument("--round", type=str, default="0")
     parser.add_argument("--device_n", type=str, default="0")
     parser.add_argument("--type", type=str, default="face")
-    parser.add_argument("--prompt", type=str, default="a_photo_of_sks_person")
+    # parser.add_argument("--prompt", type=str, default="a_photo_of_***_person")
+    parser.add_argument("--gen_path", type=str, required=True, default=None,)
+    parser.add_argument("--r", type=str, required=True, default=None,)
+    parser.add_argument("--spwords_file", type=str, default="spwords.json")
 
     os.environ["CUDA_VISIBLE_DEVICES"] = parser.parse_args().device_n
+    spwords_file = parser.parse_args().spwords_file
+    r = parser.parse_args().r
+    # read json,load key "spwords"
+    spwords = []
+    with open(f"{script_dir}/{spwords_file}", "r") as f:
+        spwords = json.load(f)["spwords_list"]
     # target_path = "/data/home/yekai/github/DiffAdvPerturbationBench/Algorithms/Anti-DreamBooth/exp_datas_output/aspl_VGGFace2_random50_r4p8p12p16"
     target_path = parser.parse_args().target
     df_save_path = f"{script_dir}/eval_result"
+    if not os.path.exists(df_save_path):
+        os.makedirs(df_save_path)
     # rounds = "50"
     rounds = parser.parse_args().round
 
 
     # gen_prompt = "a_photo_of_sks_person"
     # gen_prompt = "a_painting_of_sks_artwork"
-    gen_prompt = parser.parse_args().prompt
-
+    # gen_prompt = parser.parse_args().prompt
+    gen_path = parser.parse_args().gen_path
     device = torch.device("cuda")
     # score_dict = {"max_noise_r":[],"noise_L0":[],"pix_change_mean":[],"change_area_mean":[],"ciede2000_score":[]}
     # eval_items = ["exp_run_name","max_noise_r","noise_L0","pix_change_mean","change_area_mean","ciede2000_score",'SDS','CLIP_Face_IQA','LIQE_Scene_Human','CLIPIQA','BRISQUE','LIQE_Quality','IMS_CLIP_ViT-B/32','CLIP_IQAC','IMS_VGG-Face_cosine','PSNR_ref','PSNR_train']
@@ -129,14 +138,22 @@ if __name__ == "__main__":
         match = re.search(r'-id(\d+)-', s)
         return int(match.group(1)) if match else float('inf')
 
-    dir_list= os.listdir(target_path)
+    dir_list = os.listdir(target_path)
+    dir_list = [d for d in dir_list if f"-r{r}-" in d]
+    # only for MetaCloak
+    # dir_list = [d for d in dir_list if f"-radius{r}-" in d]
     sorted_dirlist = sorted(dir_list, key=extract_id)
+    print(f"sorted_dirlist: {sorted_dirlist}")
+
+    # exit("test")
 
     eval_data = pd.DataFrame(columns=eval_items)
     for exp_dir in tqdm(sorted_dirlist):
+        now_id = extract_id(exp_dir)
+        now_spword = spwords[now_id]
+        # prompt = gen_prompt.replace("***",now_spword)
         score_dict = {}
         score_dict["exp_run_name"] = exp_dir
-        print(exp_dir)
         exp_path = os.path.join(target_path,exp_dir)
         clean_ref_dir = os.path.join(exp_path,'image_clean_ref')
         ori_pics_dir = os.path.join(exp_path,"image_before_addding_noise")
@@ -146,8 +163,13 @@ if __name__ == "__main__":
             if len(matched) != 1:
                 raise ValueError(f"Expected exactly one match, but found {len(matched)}: {matched}")
             noisy_pics_dir = os.path.abspath(matched[0])
-        gen_pics_dir = os.path.join(exp_path,f"train_output/dreambooth/{gen_prompt}")
-        print(gen_pics_dir)
+        gen_pics_dir = os.path.join(gen_path,str(now_id))
+        # print(f"exp_run_name: {exp_dir}")
+        # print(f"clean_ref_dir: {clean_ref_dir}")
+        # print(f"ori_pics_dir: {ori_pics_dir}")
+        # print(f"noisy_pics_dir: {noisy_pics_dir}")
+        # print(f"gen_pics_dir: {gen_pics_dir}")
+        # continue
         score_from_tool = get_score(gen_pics_dir,clean_ref_dir,clean_img_dir=ori_pics_dir, perturbed_img_dir=noisy_pics_dir,eval_items=eval_items,type_name=parser.parse_args().type)
         # score_dict.update(score_from_tool)
         # print(score_dict)

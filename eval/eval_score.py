@@ -35,6 +35,9 @@ import os
 from skimage.metrics import peak_signal_noise_ratio
 import lpips
 from skimage.metrics import structural_similarity as ssim
+from openai import OpenAI
+import base64
+import time
 # from pytorch_fid import fid_score 
 
 def loop_to_get_overall_score(gen_image_dir, clean_ref_dir="", func_get_score_of_one_image=None, type_name="face"):
@@ -178,6 +181,29 @@ def CLIP_IQAC_get_score(gen_i, clean_ref_db=None, clean_image_dir=None,type_name
     return similarity_matrix[0][0].item() - similarity_matrix[0][1].item()
 
 CLIP_IQAC_Scorer = ScoreEval(func_get_score_of_one_image=CLIP_IQAC_get_score)
+
+def CLIP_ISIMC_get_score(gen_i, clean_ref_db=None, clean_image_dir=None,type_name="face", mode=None):
+    gen_img = Image.open(gen_i).convert('RGB')
+    image = clip_preprocess(gen_img).unsqueeze(0).to('cuda')
+    text_list = [clip.tokenize([f"a {type_name} with {feature}", f"a {type_name} without {feature}"]).to('cuda') for feature in mode]
+    # print(f"len of text_list: {len(text_list)}")
+    score_list = []
+    for text in text_list:
+        similarity_matrix = None
+        with torch.no_grad():
+            image_features = clip_model.encode_image(image)
+            text_features = clip_model.encode_text(text)
+            image_features /= image_features.norm(dim=-1, keepdim=True)
+            text_features /= text_features.norm(dim=-1, keepdim=True)
+            similarity_matrix = (100.0 * image_features @ text_features.T).softmax(dim=-1)
+        score_list.append(similarity_matrix[0][0].item() - similarity_matrix[0][1].item())
+    
+    # print(str([f"{feature}: {score}" for feature, score in zip(mode, score_list)]))
+    # for i in range(len(score_list)):
+        # print(f"{mode[i]}: {score_list[i]}")
+    # print(f"average score: {np.mean(score_list)}")
+    return np.mean(score_list)
+CLIP_ISIMC_Scorer = ScoreEval(func_get_score_of_one_image=CLIP_ISIMC_get_score)
 
 def CLIP_zero_short_classification_get_score(gen_i, clean_ref_db=None, clean_image_dir=None,type_name="face", mode=None):
     import torch
@@ -361,6 +387,54 @@ def SSIM_get_score(gen_i, clean_ref_db=None, clean_img_dir=None, type_name="face
     # print(f"平均 SSIM 分数：{mean_score:.4f}")
     return mean_score
 
+def get_feature_list(clean_ref_dir, type_name):
+    def encode_image(image_path):
+        with open(image_path, "rb") as image_file:
+            return base64.b64encode(image_file.read()).decode("utf-8")
+    ref_img_names = [path for path in os.listdir(clean_ref_dir) if path.lower().endswith(('.png', '.jpg', '.jpeg'))]
+    # ref_img_path = os.path.join(clean_ref_dir, ref_img_names[0])
+    # print(ref_img_path)
+    client = OpenAI(
+        # 若没有配置环境变量，请用百炼API Key将下行替换为：api_key="sk-xxx",
+        # api_key=os.getenv("DASHSCOPE_API_KEY"),
+        api_key="sk-003010ca5dd24e6a9f68af54420733a0",
+        base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+    )
+    prompt_text = None
+    with open(f'{script_dir}/prompts/{type_name}.txt', 'r', encoding='utf-8') as f:
+        prompt_text = f.read()
+    final_features = []
+    for ref_img_name in ref_img_names:
+        ref_img_path = os.path.join(clean_ref_dir, ref_img_name)
+        print(ref_img_path)
+        base64_image = encode_image(ref_img_path)
+
+        completion = client.chat.completions.create(
+            model="qwen-vl-plus",  # We can select model: https://help.aliyun.com/zh/model-studio/getting-started/models
+            messages=[{"role": "user","content": [
+                    {"type": "text","text": prompt_text},
+                    {"type": "image_url",
+                    "image_url": {"url": f"data:image/png;base64,{base64_image}"}, }
+                    ]}]
+            )
+        raw_text = completion.choices[0].message.content
+        if raw_text.startswith("{"):
+            raw_text = raw_text[1:]
+        if raw_text.endswith("}"):
+            raw_text = raw_text[:-1]
+        key_features = eval(raw_text)
+
+        print(len(key_features))
+        print(key_features)
+        if ":" in key_features[0]:
+            for i in range(len(key_features)):
+                key_features[i] = key_features[i].split(":")[1]
+        time.sleep(3)
+        final_features+= key_features
+    return final_features
+    # return ['Impressionistic brushstrokes', 'Soft color palette used.', 'Dynamic ocean waves depicted.', 'Sailboat central focus point.']
+
+
 def get_score(image_dir, clean_ref_dir=None, clean_img_dir = None, type_name="person", perturbed_img_dir=None, eval_items=None):
     # 此处增加扰动图像的评估
     if type_name == "person":
@@ -387,6 +461,7 @@ def get_score(image_dir, clean_ref_dir=None, clean_img_dir = None, type_name="pe
     if 'FID_train' in eval_items: result_dict['FID_train'] = FID_get_score(gen_i=image_dir, clean_ref_db=clean_ref_dir, clean_img_dir=clean_img_dir, type_name=type_name, mode='ori')
     if 'LPIPS' in eval_items: result_dict['LPIPS'] = LPIPS_get_score(gen_i=perturbed_img_dir, clean_ref_db=None, clean_img_dir=clean_img_dir, type_name=type_name, mode='alex')
     if 'SSIM' in eval_items: result_dict['SSIM'] = SSIM_get_score(gen_i=perturbed_img_dir, clean_ref_db=None, clean_img_dir=clean_img_dir, type_name=type_name)
+    if 'CLIP_ISIMC' in eval_items: result_dict['CLIP_ISIMC'] = CLIP_ISIMC_Scorer(gen_image_dir=image_dir, clean_ref_db=clean_ref_dir, type_name=type_name, mode=get_feature_list(clean_ref_dir,type_name))
     if type_name == "face":
         if 'IMS_VGG-Face_cosine' in eval_items: result_dict[f"IMS_VGG-Face_cosine"] = IMS_Face_Scorer(gen_image_dir=image_dir, clean_ref_db=clean_ref_dir, type_name=type_name,mode=["cosine","VGG-Face"])
                 
