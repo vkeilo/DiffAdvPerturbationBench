@@ -55,19 +55,22 @@ def generate_lin_interval_list(start, end, num):
     list: 线性间隔的列表，包含指定数量的值。
     """
     return np.linspace(start, end, num=num).tolist()
-
+# /data/home/yekai/github/DiffAdvPerturbationBench/datasets/auxdatas/gen_aux_exps/SDS_SD21_VGGFace2_r8_id0
 # Define the possible values for each parameter
 # test_lable = "Orimetacloak4_total480_r6_idx50"
-test_lable = "Mist_SD21_VGGFace2_random50_mytarget2e-1_dynamic_r12"
+# test_lable = "Mist_SD21_VGGFace2_random50_mytarget2e-1_dynamic_r12"
+test_lable = "ASPL_SD21_VGGFace2_r8_idx10_1id1atk"
+
 params_options = {
     "DPAB_path":["/data/home/yekai/github/DiffAdvPerturbationBench"],
     # VGGFace2-clean/wikiart-data
-    "dataset_name":["VGGFace2-clean"],
-    "exp_batch_path": ["Algorithms/mist/exp_datas_output/Mist_SD21_VGGFace2_random50_mytarget2e-1_dynamic_r12"],
+    "dataset_name":["VGGFace2-10x64"],
+    # "exp_batch_path": ["Algorithms/Diff-Protect/exp_datas_output/SDS_SD21_VGGFace2_random10_r8p16p12p4"],
+    "exp_batch_path": ["datasets/auxdatas/gen_aux_exps/ASPL_SD21_VGGFace2_r8_idx10_1id1atk"],
     "pretrained_model_name_or_path": ["/data/home/yekai/github/DiffAdvPerturbationBench/SD/stable-diffusion-2-1-base"],
     "wandb_project_name": ["Dreambooth_train"],
     "mixed_precision": ["fp16"],
-    "dreambooth_training_steps": [1000],
+    "dreambooth_training_steps": [2000],
     "db_lr":[5e-7],
     # "a photo of sks person"
     "instance_prompt": ["a photo of sks person"],
@@ -80,7 +83,7 @@ params_options = {
     "class_name": ["person"],
     "eval_gen_img_num": [16],
     # aspl 50 fsmg100 SimAC 50 mist 100 sds100 meta final
-    "use_sample_steps": ["100"],
+    "use_sample_steps": ["50"],
     # "eval_mode":["gau"]
     # "gauK":[7]
 }

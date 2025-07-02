@@ -10,7 +10,7 @@ export max_train_steps=$dreambooth_training_steps
 echo set up the model path
 echo $eval_model_path
 export WANDB_MODE=offline
-# export CLEAN_REF="$ADB_PROJECT_ROOT/dataset/$dataset_name/${instance_name}/set_C"
+# export exp_path="$exp_batch_abs_path/$exp_run_name/"
 export CLEAN_REF="$exp_batch_abs_path/$exp_run_name/image_clean_ref/"
 export INSTANCE_DIR="$exp_batch_abs_path/$exp_run_name/noise-ckpt/$use_sample_steps/"
 export INSTANCE_DIR_CLEAN="$exp_batch_abs_path/$exp_run_name/image_before_addding_noise/"
@@ -34,11 +34,10 @@ if [ ! -d "$INSTANCE_DIR" ]; then
 fi
 
 echo "start dreambooth training"
-
-command="""python train_and_gen/train_dreambooth.py --clean_img_dir $INSTANCE_DIR_CLEAN --clean_ref_db $CLEAN_REF --class_name '$class_name' \
+# vkeilo del --train_text_encoder \
+command="""python train_and_gen/train_dreambooth_VV.py --clean_img_dir $INSTANCE_DIR_CLEAN --clean_ref_db $CLEAN_REF --class_name '$class_name' \
 --wandb_entity_name $wandb_entity_name \
 --seed $seed \
---train_text_encoder \
 --gradient_checkpointing \
 --pretrained_model_name_or_path='$pretrained_model_name_or_path'  \
 --instance_data_dir='$INSTANCE_DIR' \
@@ -100,4 +99,4 @@ eval $command
 
 
 mv $DREAMBOOTH_OUTPUT_DIR/checkpoint-$dreambooth_training_steps/dreambooth $DREAMBOOTH_OUTPUT_DIR
-# rm -r $DREAMBOOTH_OUTPUT_DIR/checkpoint-$dreambooth_training_steps
+rm -r $DREAMBOOTH_OUTPUT_DIR/checkpoint-$dreambooth_training_steps

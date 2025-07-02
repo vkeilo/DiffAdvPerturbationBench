@@ -42,14 +42,15 @@ special_text = [
 # ]
 # taskname = "Mist_SD21_VGGFace2_random50_mytarget2e-1_dynamic_r12"
 # exp_name = "Mist_SD21_VGGFace2_random50_mytarget2e-1_dynamic_r12"
-taskname = "SimAC_SD21_VGGFace2_10ids_r8_atkid1"
-exp_name = "SimAC_VGGFace2_random50_r4p8p12p16"
+# taskname = "SimAC_SD21_VGGFace2_r8_idx10_1id1atk"
+taskname = "MultiATK_SD21_VGGFace2_r8_idx10_1idmatk"
+# exp_name = "SimAC_SD21_VGGFace2_r8_idx10_1id1atk"
 
 # /data/home/yekai/github/DiffAdvPerturbationBench/Algorithms/mist/exp_datas_output/Mist_SD21_VGGFace2_random50_mytarget11r_dynamic_r12
 r = 8
-Alg = "SimAC"
+Alg = "MultiATK"
 round = "50"
-target_exp_path = os.path.join(DAPB_path, "Algorithms", Alg, "exp_datas_output", exp_name)
+target_exp_path = "/data/home/yekai/github/DiffAdvPerturbationBench/datasets/auxdatas/gen_aux_exps/MultiATK_SD21_VGGFace2_r8_idx10_1idmatk"
 # class-person/class-artwork
 class_data_path = os.path.join(DAPB_path,"class-person")
 save_path = f"{now_dir_path}/concepts_lists"
@@ -60,9 +61,9 @@ concepts_num = 10
 # default atk all id
 attacked_id = [i for i in range(concepts_num)]
 # attacked_id = [1]
-data_path = os.path.join(DAPB_path,"datasets/VGGFace2-clean")
+data_path = os.path.join(DAPB_path,"datasets/VGGFace2-10x64")
 
-atk_data_path = f"{target_exp_path}/*-id?replaceidhere?-*r{str(r)}*/noise-ckpt/{round}"
+atk_data_path = f"{target_exp_path}/*_id?replaceidhere?_*r{str(r)}*/noise-ckpt/{round}"
 final_list = []
 
 for i in range(concepts_num):

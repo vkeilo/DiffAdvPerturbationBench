@@ -261,10 +261,10 @@ def PSNR_get_score(gen_i, clean_ref_db=None, clean_img_dir=None, type_name="face
     scores_list = []
 
     if mode =="perturbation":
-        noise_img_name = os.path.basename(gen_i)
+        noise_img_name = os.path.basename(gen_i).split('.')[0]
         clean_img_name = None
         for filename in os.listdir(target_path):
-            if filename in noise_img_name:
+            if filename.split('.')[0] in noise_img_name:
                 clean_img_name = filename
                 break
         if clean_img_name == None:

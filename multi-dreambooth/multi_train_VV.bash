@@ -1,12 +1,12 @@
 #   --pretrained_vae_name_or_path="stabilityai/sd-vae-ft-mse" \
-export CUDA_VISIBLE_DEVICES=2
+export CUDA_VISIBLE_DEVICES=3
 # export task_name="Mist_SD21_VGGFace2_random50_mytarget2e-1_dynamic_r12"
 export task_name="MultiATK_SD21_VGGFace2_r8_idx10_1idmatk"
 
 export train_steps=10000
-python3 train_dreambooth.py \
+python3 train_dreambooth_VV.py \
     --pretrained_model_name_or_path="/data/home/yekai/github/DiffAdvPerturbationBench/SD/stable-diffusion-2-1-base" \
-    --output_dir="/data/home/yekai/github/DiffAdvPerturbationBench/multi-dreambooth/train_outputs/${task_name}" \
+    --output_dir="/data/home/yekai/github/DiffAdvPerturbationBench/multi-dreambooth/train_outputs/${task_name}_VV" \
     --revision="fp16" \
     --with_prior_preservation --prior_loss_weight=1.0 \
     --seed=1337 \
