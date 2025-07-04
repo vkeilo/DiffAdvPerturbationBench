@@ -82,10 +82,8 @@ params_options = {
     # "class_name": ["painting"],
     "class_name": ["person"],
     "eval_gen_img_num": [16],
-    # aspl 50 fsmg100 SimAC 50 mist 100 sds100 meta final
+    # aspl50 fsmg100 SimAC50 mist100 sds100
     "use_sample_steps": ["50"],
-    # "eval_mode":["gau"]
-    # "gauK":[7]
 }
 
 # Number of times to repeat each configuration

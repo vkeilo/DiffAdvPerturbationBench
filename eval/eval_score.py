@@ -396,8 +396,7 @@ def get_feature_list(clean_ref_dir, type_name):
     # print(ref_img_path)
     client = OpenAI(
         # 若没有配置环境变量，请用百炼API Key将下行替换为：api_key="sk-xxx",
-        # api_key=os.getenv("DASHSCOPE_API_KEY"),
-        api_key="sk-003010ca5dd24e6a9f68af54420733a0",
+        api_key=os.getenv("DASHSCOPE_API_KEY"),
         base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
     )
     prompt_text = None
