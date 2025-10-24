@@ -1,6 +1,6 @@
 
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 import glob
 import sys
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -97,28 +97,28 @@ if __name__ == "__main__":
     # score_dict = {"max_noise_r":[],"noise_L0":[],"pix_change_mean":[],"change_area_mean":[],"ciede2000_score":[]}
     # eval_items = ["exp_run_name","max_noise_r","noise_L0","pix_change_mean","change_area_mean","ciede2000_score",'SDS','CLIP_Face_IQA','LIQE_Scene_Human','CLIPIQA','BRISQUE','LIQE_Quality','IMS_CLIP_ViT-B/32','CLIP_IQAC','IMS_VGG-Face_cosine','PSNR_ref','PSNR_train']
     eval_items = ["exp_run_name",
-                    # "max_noise_r",
-                    # "noise_L0",
-                    # "pix_change_mean",
-                    # "change_area_mean",
-                    # "ciede2000_score",
-                    # 'SDS',
-                    # 'CLIP_Face_IQA',
-                    # 'LIQE_Scene_Human',
-                    # 'CLIPIQA',
-                    # 'BRISQUE',
-                    # 'LIQE_Quality',
-                    # 'IMS_CLIP_ViT-B/32',
-                    # 'CLIP_IQAC',
-                    # 'IMS_VGG-Face_cosine',
-                    # 'PSNR_ref',
-                    # 'PSNR_train',
-                    # 'PSNR_perturbation',
-                    # 'FID_ref',
-                    # 'FID_train',
-                    # 'LPIPS',
-                    # 'SSIM',
-                    'CLIP_ISIMC'
+                    "max_noise_r",
+                    "noise_L0",
+                    "pix_change_mean",
+                    "change_area_mean",
+                    "ciede2000_score",
+                    'SDS',
+                    'CLIP_Face_IQA',
+                    'LIQE_Scene_Human',
+                    'CLIPIQA',
+                    'BRISQUE',
+                    'LIQE_Quality',
+                    'IMS_CLIP_ViT-B/32',
+                    'CLIP_IQAC',
+                    'IMS_VGG-Face_cosine',
+                    'PSNR_ref',
+                    'PSNR_train',
+                    'FID_ref',
+                    'FID_train',
+                    'LPIPS',
+                    'SSIM',
+                    'PSNR_perturbation',
+                    # 'CLIP_ISIMC'
                     # 'precision',
                     # 'recall'
                 ]

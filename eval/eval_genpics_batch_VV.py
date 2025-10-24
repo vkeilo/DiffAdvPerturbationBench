@@ -1,6 +1,6 @@
 
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 import glob
 import sys
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -120,9 +120,9 @@ if __name__ == "__main__":
                     'PSNR_perturbation',
                     'FID_ref',
                     'FID_train',
-                    # 'LPIPS',
-                    # 'SSIM',
-                    # 'CLIP_ISIMC'
+                    'LPIPS',
+                    'SSIM',
+                    'CLIP_ISIMC'
                     # 'precision',
                     # 'recall'
                 ]
