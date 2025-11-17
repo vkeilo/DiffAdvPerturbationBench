@@ -19,3 +19,9 @@
 [submodule "Algorithms/VCPro"]
 	path = Algorithms/VCPro
 	url = git@github.com:vkeilo/VCPro.git
+[submodule "Algorithms/IDProtector"]
+	path = Algorithms/IDProtector
+	url = git@github.com:vkeilo/IDProtector.git
+[submodule "Algorithms/Pretender"]
+	path = Algorithms/Pretender
+	url = git@github.com:vkeilo/Pretender.git
