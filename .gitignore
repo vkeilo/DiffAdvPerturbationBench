@@ -10,3 +10,6 @@ class-person/*
 datesets_eval/*
 finished_test/*
 eval/LIQE/IQA_Database
+*.png
+*.jpg
+*.jpeg

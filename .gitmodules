@@ -25,3 +25,6 @@
 [submodule "Algorithms/Pretender"]
 	path = Algorithms/Pretender
 	url = git@github.com:vkeilo/Pretender.git
+[submodule "Algorithms/DiffPUEGenerator"]
+	path = Algorithms/DiffPUEGenerator
+	url = git@github.com:vkeilo/DiffPUEGenerator.git
