@@ -28,3 +28,6 @@
 [submodule "Algorithms/DiffPUEGenerator"]
 	path = Algorithms/DiffPUEGenerator
 	url = git@github.com:vkeilo/DiffPUEGenerator.git
+[submodule "Algorithms/DiffPUE"]
+	path = Algorithms/DiffPUE
+	url = git@github.com:vkeilo/DiffPUE.git
