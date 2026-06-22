@@ -2,7 +2,7 @@
 
 **DiffAdvPerturbationBench** is an evaluation framework for unifying the assessment of various perturbation-based defense algorithms in the context of customized diffusion models (e.g., DreamBooth fine-tuning).
 
-This project focuses on evaluating a series of published image perturbation defense methods (e.g., Anti-Dreambooth, Mist, AdvDM, MetaCloak, PhotoGuard, SDS, SimAC) for their protection performance under **Stable Diffusion** fine-tuning tasks. It supports automated execution of multiple algorithms, perturbation generation, model fine-tuning, and image quality analysis.
+This project focuses on evaluating a series of published image perturbation defense methods (e.g., Anti-Dreambooth, Mist, AdvDM, MetaCloak, PhotoGuard, SDS, SimAC, DiffPUE) for their protection performance under **Stable Diffusion** fine-tuning tasks. It supports automated execution of multiple algorithms, perturbation generation, model fine-tuning, and image quality analysis.
 
 ---
 
@@ -31,8 +31,10 @@ The following mainstream image protection methods are currently supported within
 - [x] PhotoGuard
 - [x] SDS
 - [x] SimAC
+- [x] DiffPUE
 
 Each algorithm is placed in the `Algorithms/<AlgorithmName>/` directory and supports batch task execution and output saving.
+
 
 ---
 
@@ -176,8 +178,6 @@ The evaluation result `SimAC_VGGFace2_random50_r4p8p12p16_test.csv` is saved in 
 
 - The full process for other algorithms only differs in the parameter settings during perturbation task list generation. For details, refer to the original project fork of each algorithm.
 
----
-
 ## 📦 Environment Dependencies
 
 CUDA configuration used on the experiment server:  
@@ -185,7 +185,7 @@ cuda: 11.8
 cudnn: 9.0.3
 
 All experiment code requires only two conda environments.  
-Except for the perturbation generation of Mist and Diff-Protect (AdvDM, SDS, PhotoGuard) algorithms which require the `mist` environment, all other operations are carried out in the `MetaCloakp` environment.
+Except for the perturbation generation of Mist and Diff-Protect (AdvDM, SDS, PhotoGuard) algorithms which require the `mist` environment, all other operations, including `DiffPUE`, are carried out in the `MetaCloakp` environment.
 
 #### MetaCloakp  
 https://github.com/VinAIResearch/Anti-DreamBooth
